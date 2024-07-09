@@ -4,6 +4,7 @@ on: push
 jobs:
   sonarcloud:
     runs-on: ubuntu-latest
+    environment: actions
 
     services:
       postgres:
