@@ -31,7 +31,7 @@ jobs:
           echo DEVELOP=${{ contains(github.event.pull_request.labels.*.name, 'DEVELOP') }} >> ./sonar_scripts/.env
 
       - name: Criar diretório
-        run: mkdir analytics-raw-data
+        run: mkdir -p analytics-raw-data
 
       - name: Coletar métricas no SonarCloud
         run: python ./sonar_scripts/parser.py
