@@ -2,13 +2,14 @@ import os, sys
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-POSTGRES_USER = os.getenv("POSTGRES_USER")
-POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
-POSTGRES_HOST = os.getenv("POSTGRES_HOST")
-POSTGRES_DB = os.getenv("POSTGRES_DB")
-POSTGRES_PORT = os.getenv("POSTGRES_PORT", default=5432)
+# POSTGRES_USER = os.getenv("POSTGRES_USER")
+# POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+# POSTGRES_HOST = os.getenv("POSTGRES_HOST")
+# POSTGRES_DB = os.getenv("POSTGRES_DB")
+# POSTGRES_PORT = os.getenv("POSTGRES_PORT", default=5432)
 
-POSTGRES_URI = f'postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}'
+POSTGRES_URI = f'postgresql://unbtv:z66y7sfFA8uEGf5t7LQc2fP2UUTxzMhe@dpg-cqf64o0gph6c73b7iasg-a/unbtv'
+#postgresql://unbtv:z66y7sfFA8uEGf5t7LQc2fP2UUTxzMhe@dpg-cqf64o0gph6c73b7iasg-a/unbtv
 
 engine = create_engine(POSTGRES_URI)
 
