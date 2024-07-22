@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from pydantic import BaseModel, EmailStr
 from starlette.responses import JSONResponse
 from typing import List
-from domain import authSchema
+from src.domain import authSchema
 
 conf = ConnectionConfig(
   MAIL_USERNAME = os.getenv("MAIL_USERNAME"),
