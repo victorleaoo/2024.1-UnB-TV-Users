@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 # POSTGRES_DB = os.getenv("POSTGRES_DB")
 # POSTGRES_PORT = os.getenv("POSTGRES_PORT", default=5432)
 
-POSTGRES_URI = f'postgresql://unbtv:z66y7sfFA8uEGf5t7LQc2fP2UUTxzMhe@dpg-cqf64o0gph6c73b7iasg-a/unbtv'
+POSTGRES_URI = os.getenv("POSTGRES_URL")
 #postgresql://unbtv:z66y7sfFA8uEGf5t7LQc2fP2UUTxzMhe@dpg-cqf64o0gph6c73b7iasg-a/unbtv
 
 engine = create_engine(POSTGRES_URI)
