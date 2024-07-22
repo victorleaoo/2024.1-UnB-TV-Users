@@ -9,7 +9,7 @@ load_dotenv()
 dotenv.validate_dotenv()
 
 from src.controller import userController, authController
-from database import engine 
+from src.database import engine 
 from src.model import userModel
 
 userModel.Base.metadata.create_all(bind=engine)
