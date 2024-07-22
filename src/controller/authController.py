@@ -1,7 +1,7 @@
 import os
 from fastapi import APIRouter, HTTPException, Response, status, Depends
 from src.utils import security, enumeration, send_mail
-from database import get_db
+from src.database import get_db
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from src.constants import errorMessages
