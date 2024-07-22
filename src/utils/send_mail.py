@@ -1,11 +1,9 @@
 import os
 from fastapi import BackgroundTasks
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
-from dotenv import load_dotenv
 from pydantic import BaseModel, EmailStr
 from starlette.responses import JSONResponse
 from typing import List
-from domain import authSchema
 
 conf = ConnectionConfig(
   MAIL_USERNAME = os.getenv("MAIL_USERNAME"),
