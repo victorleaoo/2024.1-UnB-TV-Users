@@ -1,11 +1,11 @@
 from fastapi import APIRouter, HTTPException, Response, status, Depends, Header
-from src.database import get_db
+from database import get_db
 from sqlalchemy.orm import Session
 
-from src.constants import errorMessages
-from src.domain import userSchema
-from src.repository import userRepository
-from src.utils import security, enumeration
+from constants import errorMessages
+from domain import userSchema
+from repository import userRepository
+from utils import security, enumeration
 
 from fastapi_filter import FilterDepends
 

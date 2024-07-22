@@ -3,7 +3,7 @@ from pydantic import BaseModel, ConfigDict
 from fastapi_filter import FilterDepends, with_prefix
 from sqlalchemy import or_
 from fastapi_filter.contrib.sqlalchemy import Filter
-from src.model import userModel
+from model import userModel
 
 class UserUpdate(BaseModel):
   name: str | None = None

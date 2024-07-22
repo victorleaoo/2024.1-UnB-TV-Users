@@ -3,14 +3,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
-from src.utils import dotenv
+from utils import dotenv
 
 load_dotenv()
 dotenv.validate_dotenv()
 
-from src.controller import userController, authController
-from src.database import engine 
-from src.model import userModel
+from controller import userController, authController
+from database import engine 
+from model import userModel
 
 userModel.Base.metadata.create_all(bind=engine)
 

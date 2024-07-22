@@ -2,8 +2,8 @@
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from src.domain import userSchema
-from src.model import userModel
+from domain import userSchema
+from model import userModel
 
 # Obtem usuario a partir do seu ID
 def get_user(db: Session, user_id: int):

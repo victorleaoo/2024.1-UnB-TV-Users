@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 from fastapi.security import OAuth2PasswordBearer
-from src.constants import errorMessages 
+from constants import errorMessages 
 
 SECRET_KEY = os.getenv("SECRET")
 ALGORITHM = os.getenv("ALGORITHM")
