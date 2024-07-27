@@ -121,3 +121,6 @@ def set_user_reset_pass_code(db: Session, db_user: userSchema.User, code: int):
 def delete_user(db: Session, db_user: userSchema.User):
   db.delete(db_user)
   db.commit()
+
+def get_all_users(db: Session):
+ return db.query(userModel.User).all()
