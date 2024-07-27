@@ -1,4 +1,5 @@
 import os
+import re 
 from fastapi import APIRouter, HTTPException, Response, status, Depends
 from utils import security, enumeration, send_mail
 from database import get_db
@@ -43,9 +44,12 @@ async def register(data: authSchema.UserCreate, db: Session = Depends(get_db)):
 
   userRepository.create_user(db, name=data.name, connection=data.connection, email=data.email, password=hashed_password, activation_code=activation_code)
   
-  await send_mail.send_verification_code(email=data.email, code=activation_code)
+  if re.search(r"unb", data.email):
+    await send_mail.send_verification_code(email=data.email, code=activation_code, is_unb=True)
+  else:
+    await send_mail.send_verification_code(email=data.email, code=activation_code)
 
-  return JSONResponse(status_code=201, content={ "status": "success" })
+return JSONResponse(status_code=201, content={ "status": "success" })
 
   # Recebe os dados de login
 @auth.post("/login", response_model=authSchema.Token)
