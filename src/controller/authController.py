@@ -202,3 +202,10 @@ async def update_user_password(data: authSchema.ResetPasswordUpdate, db: Session
   updated_user = userRepository.update_password(db, user, hashed_password)
 
   return updated_user
+
+@auth.get('/users', response_model=List[userSchema.User])
+async def get_users(db: Session = Depends(get_db)):
+    users = userRepository.get_all_users(db)
+    if not users:
+        raise HTTPException(status_code=404, detail="No users found")
+    return users
