@@ -117,6 +117,18 @@ class TestAuth:
 
         userModel.Base.metadata.drop_all(bind=engine)
 
+    def test_auth_get_connections(self, setup):
+        response = client.get("/api/auth/vinculo")
+        data = response.json()
+        
+        assert response.status_code == 200
+        assert isinstance(data, list)
+        assert len(data) == len(enumeration.UserConnection._value2member_map_)  # Garante que todos os valores da enum estão presentes
+
+        # Verifica se cada valor da enum está na resposta
+        for connection in enumeration.UserConnection:
+            assert connection.value in data
+
     # REGISTER
     def test_auth_register_connection_invalid(self, setup):
         response = client.post("/api/auth/register", json=invalid_connection)
@@ -197,22 +209,31 @@ class TestAuth:
         data = response.json()
         assert response.status_code == 404
 
+    def test_auth_activate_account_invalid_code(self, setup):
+        # Garante que o código de ativação está correto
+        response = client.patch("/api/auth/activate-account", json={"email": valid_user_not_active['email'], "code": 654321})
+        data = response.json()
+        assert response.status_code == 404
+        assert data['detail'] == errorMessages.INVALID_CODE
+
+    
+
     # ADMIN SETUP
     def test_admin_setup(self, setup):
-            # Testa a tentativa com e-mail inválido
-            response = client.post("/api/auth/admin-setup", json={"email": invalid_connection['email']})
-            data = response.json()
-            assert response.status_code == 404
-            assert data['detail'] == errorMessages.USER_NOT_FOUND
+        # Testa a tentativa com e-mail inválido
+        response = client.post("/api/auth/admin-setup", json={"email": invalid_connection['email']})
+        data = response.json()
+        assert response.status_code == 404
+        assert data['detail'] == errorMessages.USER_NOT_FOUND
 
-            # Testa a tentativa com usuário inativo
-            response = client.post("/api/auth/admin-setup", json={"email": valid_user_not_active['email']})
-            data = response.json()
-            assert response.status_code == 400
-            assert data['detail'] == "Account is not active"
+        # Testa a tentativa com usuário inativo
+        response = client.post("/api/auth/admin-setup", json={"email": valid_user_not_active['email']})
+        data = response.json()
+        assert response.status_code == 400
+        assert data['detail'] == "Account is not active"
 
-            # Testa a tentativa com e-mail que não contém "unb"
-            response = client.post("/api/auth/admin-setup", json={"email": valid_user_active_user['email']})
-            data = response.json()
-            assert response.status_code == 400
-            assert data['detail'] == "Account is not @unb"
+        # Testa a tentativa com e-mail que não contém "unb"
+        response = client.post("/api/auth/admin-setup", json={"email": valid_user_active_user['email']})
+        data = response.json()
+        assert response.status_code == 400
+        assert data['detail'] == "Account is not @unb"
