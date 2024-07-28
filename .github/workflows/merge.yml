@@ -1,6 +1,8 @@
 name: Merge Repositories
 
-on: [repository_dispatch]
+on:
+  repository_dispatch:
+    types: [sync]
 
 jobs:
   sync_with_upstream:
@@ -11,18 +13,18 @@ jobs:
     - name: Checkout fork
       uses: actions/checkout@v3
       with:
+        repository: victorleaoo/2024.1-UnB-TV-Users
         ref: develop
+        token: ${{ secrets.API_GITHUB_TOKEN }}
+        fetch-depth: 0
 
-    - name: Pull (Fast-Forward) upstream changes
-      id: sync
-      uses: aormsby/Fork-Sync-With-Upstream-action@v2.1
-      with:
-        upstream_repository: fga-eps-mds/2024.1-UnB-TV-Users
-        upstream_branch: develop
-        target_branch: develop
-        git_pull_args: --ff-only
-        github_token: ${{ secrets.API_GITHUB_TOKEN }}
+    - name: Add and fetch upstream
+      run: |
+        git remote add upstream https://github.com/fga-eps-mds/2024.1-UnB-TV-Users.git
+        git fetch upstream
 
-    - name: Check for new commits
-      if: steps.sync.outputs.has_new_commits
-      run: echo "There were new commits."
+    - name: Merge upstream changes
+      run: |
+        git checkout develop
+        git merge upstream/develop --no-ff
+        git push origin develop --force
