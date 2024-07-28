@@ -1,5 +1,6 @@
 import sys
 import os
+from sqlalchemy import create_engine, text
 
 # Adiciona o caminho do diretório 'src' ao sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
