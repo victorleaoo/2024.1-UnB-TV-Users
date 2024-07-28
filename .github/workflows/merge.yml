@@ -20,6 +20,7 @@ jobs:
         upstream_repository: fga-eps-mds/2024.1-UnB-TV-Users
         upstream_branch: develop
         target_branch: develop
+        git_pull_rebase_config: true
         github_token: ${{ secrets.API_GITHUB_TOKEN }}
 
     - name: Check for new commits
