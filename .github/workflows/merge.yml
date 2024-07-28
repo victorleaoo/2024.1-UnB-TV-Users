@@ -8,15 +8,30 @@ jobs:
     environment: actions
 
     steps:
-      - name: Checkout the fork repository
-        uses: actions/checkout@v3
-        with:
-          ref: develop
+    - name: Checkout main repository
+      uses: actions/checkout@v3
+      with:
+        repository: fga-eps-mds/2024.1-UnB-TV-Users
+        token: ${{ secrets.API_GITHUB_TOKEN }}
+        path: main-repo
 
-      - name: Sync with upstream
-        uses: tgymnich/fork-sync@v1.2.1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          head: develop
-          base: develop
-          merge_method: rebase
+    - name: Checkout fork repository
+      uses: actions/checkout@v3
+      with:
+        repository: victorleaoo/2024.1-UnB-TV-Users
+        token: ${{ secrets.API_GITHUB_TOKEN }}
+        path: fork-repo
+
+    - name: Sync fork with main repository
+      run: |
+        cd fork-repo
+        git remote add upstream ../main-repo
+        git fetch upstream
+        git reset --hard upstream/main
+
+    - name: Push changes to fork repository
+      run: |
+        cd fork-repo
+        git push origin main --force
+      env:
+        GITHUB_TOKEN: ${{ secrets.API_GITHUB_TOKEN }}
