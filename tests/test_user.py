@@ -1,172 +1,225 @@
+import sys
+import os
+
+# Adiciona o caminho do diretório 'src' ao sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
+
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
 from src.main import app
-from src.database import Base, get_db
-from src.model import userModel
-from src.repository import userRepository
+from src.constants import errorMessages
+from src.database import get_db, engine, Base
 from tests import test_auth
 
-# Criação do banco de dados de teste
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+valid_user_active_admin = test_auth.valid_user_active_admin
+valid_user_active_user = test_auth.valid_user_active_user
+duplicated_user = test_auth.duplicated_user
+valid_user_not_active = test_auth.valid_user_not_active
+invalid_connection = test_auth.invalid_connection
+invalid_pass_length = test_auth.invalid_pass_length
+invalid_pass = test_auth.invalid_pass
+valid_user_to_be_deleted = test_auth.valid_user_to_be_deleted
 
-Base.metadata.create_all(bind=engine)
+total_registed_users = test_auth.total_registed_users
 
 client = TestClient(app)
 
-# Dependency override
-def override_get_db():
-    try:
-        db = TestingSessionLocal()
-        yield db
-    finally:
-        db.close()
+class TestUser: 
+  
+  @pytest.fixture(scope="session", autouse=True)
+  def setup(self):
+    headers={'Authorization': f'Bearer {test_auth.TestAuth.__admin_access_token__}'}
 
-app.dependency_overrides[get_db] = override_get_db
-
-class TestUser:
-
-    @pytest.fixture(scope="function", autouse=True)
-    def setup(self):
-        # Limpa o banco de dados antes de cada teste
-        Base.metadata.drop_all(bind=engine)
-        Base.metadata.create_all(bind=engine)
-
-        # Criação de usuários para teste
-        self.db = TestingSessionLocal()
-        self.user1 = userRepository.create_user(self.db, name="Admin User", connection="ADMIN", email="admin@unb.br", password="123456", activation_code=None)
-        self.user2 = userRepository.create_user(self.db, name="Regular User", connection="ALUNO", email="user@unb.br", password="123456", activation_code=None)
-        self.user3 = userRepository.create_user(self.db, name="Another User", connection="PROFESSOR", email="another@unb.br", password="123456", activation_code=None)
-        self.db.commit()
-
-    def test_get_all_users(self):
-        headers = {'Authorization': f'Bearer {test_auth.TestAuth.__admin_access_token__}'}
-        response = client.get("/api/auth/users", headers=headers)
-        data = response.json()
-        
-        assert response.status_code == 200
-        assert len(data) == 3
-        assert data[0]['email'] == "admin@unb.br"
-        assert data[1]['email'] == "user@unb.br"
-        assert data[2]['email'] == "another@unb.br"
-
-    def test_user_read_user_not_found(self):
-        headers = {'Authorization': f'Bearer {test_auth.TestAuth.__admin_access_token__}'}
-        response = client.get("/api/users/10", headers=headers)
-        data = response.json()
-        
-        assert response.status_code == 404
-        assert data['detail'] == errorMessages.USER_NOT_FOUND
+    # Get Users - Sem Filtro
+    response = client.get("/api/users/", headers=headers)
+    data = response.json()
+    print(f"Get Users - Sem Filtro: {len(data)} users")
+    assert response.status_code == 200
+    assert len(data) == total_registed_users
+    assert response.headers['x-total-count'] == str(total_registed_users)
     
-    def test_user_read_user_by_email_not_found(self):
-        headers = {'Authorization': f'Bearer {test_auth.TestAuth.__admin_access_token__}'}
-        response = client.get(f"/api/users/email/invalid@unb.br", headers=headers)
-        data = response.json()
-        
-        assert response.status_code == 404
-        assert data['detail'] == errorMessages.USER_NOT_FOUND
+    # Get Users - Offset
+    response = client.get("/api/users/?offset=1", headers=headers)
+    data = response.json()
+    print(f"Get Users - Offset: {len(data)} users")
+    assert response.status_code == 200
+    assert len(data) == 4
+    assert response.headers['x-total-count'] == str(total_registed_users)
     
-    def test_user_read_user(self):
-        headers = {'Authorization': f'Bearer {test_auth.TestAuth.__admin_access_token__}'}
-        response = client.get(f"/api/users/{self.user1.id}", headers=headers)
-        data = response.json()
-        
-        assert response.status_code == 200
-        assert data['name'] == self.user1.name
-        assert data['connection'] == self.user1.connection
-        assert data['email'] == self.user1.email
-        assert data['is_active'] == True
+    # Get Users - Limit
+    response = client.get("/api/users/?limit=1", headers=headers)
+    data = response.json()
+    print(f"Get Users - Limit: {len(data)} users")
+    assert response.status_code == 200
+    assert len(data) == 1
+    assert response.headers['x-total-count'] == str(total_registed_users)
     
-    def test_user_read_user_by_email(self):
-        headers = {'Authorization': f'Bearer {test_auth.TestAuth.__admin_access_token__}'}
-        response = client.get(f"/api/users/email/{self.user1.email}", headers=headers)
-        data = response.json()
-        
-        assert response.status_code == 200
-        assert data['name'] == self.user1.name
-        assert data['connection'] == self.user1.connection
-        assert data['email'] == self.user1.email
+    # Get Users - Filtrar Name
+    response = client.get(f"/api/users/?name={valid_user_active_admin['name']}", headers=headers)
+    data = response.json()
+    print(f"Get Users - Filtrar Name: {data}")
+    assert response.status_code == 200
+    assert data[0]['name'] == valid_user_active_admin['name']
+    assert data[0]['email'] == valid_user_active_admin['email']
+    assert data[0]['connection'] == valid_user_active_admin['connection']
+    assert response.headers['x-total-count'] == '1'
     
-    # Partial Update User
-    def test_user_partial_update_user_invalid_connection(self):
-        headers = {'Authorization': f'Bearer {test_auth.TestAuth.__admin_access_token__}'}
-        response = client.patch(f"/api/users/{self.user1.id}", json={"name": "NameZ", "email": "valid@email.com", "connection": "INVALIDO"}, headers=headers)
-        data = response.json()
-        
-        assert response.status_code == 400
-        assert data['detail'] == errorMessages.INVALID_CONNECTION
+    # Get Users - Filtrar Email
+    response = client.get(f"/api/users/?email={valid_user_active_admin['email']}", headers=headers)
+    data = response.json()
+    print(f"Get Users - Filtrar Email: {data}")
+    assert response.status_code == 200
+    assert data[0]['name'] == valid_user_active_admin['name']
+    assert data[0]['email'] == valid_user_active_admin['email']
+    assert data[0]['connection'] == valid_user_active_admin['connection']
+    assert response.headers['x-total-count'] == '1'    
     
-    def test_user_partial_update_user_not_found(self):
-        headers = {'Authorization': f'Bearer {test_auth.TestAuth.__admin_access_token__}'}
-        response = client.patch(f"/api/users/10", json={"name": "NameZ"}, headers=headers)
-        data = response.json()
+    # Get Users - Filtrar Name ou Email
+    response = client.get(f"/api/users/?name_or_email={valid_user_active_admin['name'][0:2]}", headers=headers)
+    data = response.json()
+    print(f"Get Users - Filtrar Name ou Email: {data}")
+    assert response.status_code == 200
+    assert data[0]['name'] == valid_user_active_admin['name']
+    assert data[0]['email'] == valid_user_active_admin['email']
+    assert data[0]['connection'] == valid_user_active_admin['connection']
+    assert response.headers['x-total-count'] == '1'
+  
+    # Get Users - Filtrar Connection
+    response = client.get(f"/api/users/?connection=PROFESSOR", headers=headers)
+    data = response.json()
+    print(f"Get Users - Filtrar Connection: {len(data)} users")
+    assert response.status_code == 200
+    assert len(data) == 1
+    assert response.headers['x-total-count'] == '1'
         
-        assert response.status_code == 404
-        assert data['detail'] == errorMessages.USER_NOT_FOUND
+  # Read User
+  def test_user_read_user_not_found(self, setup):
+    headers={'Authorization': f'Bearer {test_auth.TestAuth.__admin_access_token__}'}
+    response = client.get("/api/users/10", headers=headers)
+    data = response.json()
+    print(f"Read User Not Found: {data}")
     
-    def test_user_partial_update_user_already_registered_email(self):
-        headers = {'Authorization': f'Bearer {test_auth.TestAuth.__admin_access_token__}'}
-        response = client.patch(f"/api/users/{self.user1.id}", json={"email": self.user2.email}, headers=headers)
-        data = response.json()
-        
-        assert response.status_code == 400
-        assert data['detail'] == errorMessages.EMAIL_ALREADY_REGISTERED
+    assert response.status_code == 404
+    assert data['detail'] == errorMessages.USER_NOT_FOUND
     
-    def test_user_partial_update_user(self):
-        headers = {'Authorization': f'Bearer {test_auth.TestAuth.__admin_access_token__}'}
-        response = client.patch(f"/api/users/{self.user1.id}", json={"name": "Updated Admin"}, headers=headers)
-        data = response.json()
-        
-        assert response.status_code == 200
-        assert data['name'] == "Updated Admin"
-        assert data['email'] == self.user1.email 
-        assert data['connection'] == self.user1.connection
+  def test_user_read_user_by_email_not_found(self, setup):
+    headers={'Authorization': f'Bearer {test_auth.TestAuth.__admin_access_token__}'}
+    response = client.get(f"/api/users/email/{invalid_connection['email']}", headers=headers)
+    data = response.json()
+    print(f"Read User By Email Not Found: {data}")
     
-    # Update Role
-    def test_user_update_role_not_authorized(self):
-        headers = {'Authorization': f'Bearer {test_auth.TestAuth.__user_access_token__}'}
-        response = client.patch(f"/api/users/role/{self.user2.id}", json={"role": "ADMIN"}, headers=headers)
-        data = response.json()
-        
-        assert response.status_code == 401
-        assert data['detail'] == errorMessages.NO_PERMISSION
+    assert response.status_code == 404
+    assert data['detail'] == errorMessages.USER_NOT_FOUND
     
-    def test_user_update_role_not_found(self):
-        headers = {'Authorization': f'Bearer {test_auth.TestAuth.__admin_access_token__}'}
-        response = client.patch(f"/api/users/role/10", json={"role": "ADMIN"}, headers=headers)
-        data = response.json()
-        
-        assert response.status_code == 404
-        assert data['detail'] == errorMessages.USER_NOT_FOUND
+  def test_user_read_user(self, setup):
+    headers={'Authorization': f'Bearer {test_auth.TestAuth.__admin_access_token__}'}
+    response = client.get("/api/users/1", headers=headers)
+    data = response.json()
+    print(f"Read User: {data}")
     
-    def test_user_update_role_success(self):
-        headers = {'Authorization': f'Bearer {test_auth.TestAuth.__admin_access_token__}'}
-        response = client.patch(f"/api/users/role/{self.user2.id}", json={"role": "ADMIN"}, headers=headers)
-        data = response.json()
-        
-        assert response.status_code == 200
+    assert response.status_code == 200
+    assert data['name'] == valid_user_active_admin['name']
+    assert data['connection'] == valid_user_active_admin['connection']
+    assert data['email'] == valid_user_active_admin['email']
+    assert data['is_active'] == True
     
-    # Delete User
-    def test_user_delete_user_not_found(self):
-        headers = {'Authorization': f'Bearer {test_auth.TestAuth.__admin_access_token__}'}
-        response = client.delete(f"/api/users/10", headers=headers)
-        data = response.json()
-        
-        assert response.status_code == 404
-        assert data['detail'] == errorMessages.USER_NOT_FOUND
+  def test_user_read_user_by_email(self, setup):
+    headers={'Authorization': f'Bearer {test_auth.TestAuth.__admin_access_token__}'}
+    response = client.get(f"/api/users/email/{valid_user_active_admin['email']}", headers=headers)
+    data = response.json()
+    print(f"Read User By Email: {data}")
     
-    def test_user_delete_user_success(self):
-        headers = {'Authorization': f'Bearer {test_auth.TestAuth.__admin_access_token__}'}
-        response = client.delete(f"/api/users/{self.user3.id}", headers=headers)
-        data = response.json()
-        
-        assert response.status_code == 200
-        assert data['name'] == self.user3.name
-        assert data['connection'] == self.user3.connection
-        assert data['email'] == self.user3.email
-        assert data['role'] == self.user3.role
-        assert data['is_active'] == self.user3.is_active
+    assert response.status_code == 200
+    assert data['name'] == valid_user_active_admin['name']
+    assert data['connection'] == valid_user_active_admin['connection']
+    assert data['email'] == valid_user_active_admin['email']
+    
+  # Partial Update User
+  def test_user_partial_update_user_invalid_connection(self, setup):
+    headers={'Authorization': f'Bearer {test_auth.TestAuth.__admin_access_token__}'}
+    response = client.patch(f"/api/users/1", json={"name": "NameZ", "email": "valid@email.com", "connection": "INVALIDO"}, headers=headers)
+    data = response.json()
+    print(f"Partial Update User Invalid Connection: {data}")
+    
+    assert response.status_code == 400
+    assert data['detail'] == errorMessages.INVALID_CONNECTION
+  
+  def test_user_partial_update_user_not_found(self, setup):
+    headers={'Authorization': f'Bearer {test_auth.TestAuth.__admin_access_token__}'}
+    response = client.patch(f"/api/users/10", json=valid_user_active_admin, headers=headers)
+    data = response.json()
+    print(f"Partial Update User Not Found: {data}")
+    
+    assert response.status_code == 404
+    assert data['detail'] == errorMessages.USER_NOT_FOUND
+    
+  def test_user_partial_update_user_already_registered_email(self, setup):
+    headers={'Authorization': f'Bearer {test_auth.TestAuth.__admin_access_token__}'}
+    response = client.patch(f"/api/users/1", json={"email": valid_user_not_active['email']}, headers=headers)
+    data = response.json()
+    print(f"Partial Update User Already Registered Email: {data}")
+    
+    assert response.status_code == 404
+    assert data['detail'] == errorMessages.EMAIL_ALREADY_REGISTERED
+  
+  def test_user_partial_update_user(self, setup):
+    headers={'Authorization': f'Bearer {test_auth.TestAuth.__admin_access_token__}'}
+    response = client.patch(f"/api/users/1", json={"name": "NameZ"}, headers=headers)
+    data = response.json()
+    print(f"Partial Update User: {data}")
+    
+    assert response.status_code == 200
+    assert data['name'] == "NameZ"
+    assert data['email'] == valid_user_active_admin['email'] 
+    assert data['connection'] == valid_user_active_admin['connection'] 
+    
+  # Update Role
+  def test_user_update_role_not_authorized(self, setup):
+    headers={'Authorization': f'Bearer {test_auth.TestAuth.__user_access_token__}'}
+    response = client.patch(f"/api/users/role/2", headers=headers)
+    data = response.json()
+    print(f"Update Role Not Authorized: {data}")
+    
+    assert response.status_code == 401
+    assert data['detail'] == errorMessages.NO_PERMISSION
+    
+  def test_user_update_role_not_found(self, setup):
+    headers={'Authorization': f'Bearer {test_auth.TestAuth.__admin_access_token__}'}
+    response = client.patch(f"/api/users/role/10", headers=headers)
+    data = response.json()
+    print(f"Update Role Not Found: {data}")
+    
+    assert response.status_code == 404
+    assert data['detail'] == errorMessages.USER_NOT_FOUND
+    
+  def test_user_update_role_success(self, setup):
+    headers={'Authorization': f'Bearer {test_auth.TestAuth.__admin_access_token__}'}
+    response = client.patch(f"/api/users/role/2", headers=headers)
+    data = response.json()
+    print(f"Update Role Success: {data}")
+    
+    assert response.status_code == 200
+    
+  # Delete User
+  def test_user_delete_user_not_found(self, setup):
+    headers={'Authorization': f'Bearer {test_auth.TestAuth.__admin_access_token__}'}
+    response = client.delete(f"/api/users/10", headers=headers)
+    data = response.json()
+    print(f"Delete User Not Found: {data}")
+    
+    assert response.status_code == 404
+    assert data['detail'] == errorMessages.USER_NOT_FOUND
+  
+  def test_user_delete_user_success(self, setup):
+    headers={'Authorization': f'Bearer {test_auth.TestAuth.__admin_access_token__}'}
+    response = client.delete(f"/api/users/4", headers=headers)
+    data = response.json()
+    print(f"Delete User Success: {data}")
+    
+    assert response.status_code == 200
+    assert data['name'] == valid_user_to_be_deleted['name']
+    assert data['connection'] == valid_user_to_be_deleted['connection']
+    assert data['email'] == valid_user_to_be_deleted['email']
+    assert data['role'] == 'USER'
+    assert data['is_active'] == False
