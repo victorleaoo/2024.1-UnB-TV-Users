@@ -1,4 +1,6 @@
 import os
+import re 
+from typing import List
 from fastapi import APIRouter, HTTPException, Response, status, Depends
 from utils import security, enumeration, send_mail
 from database import get_db
@@ -43,7 +45,10 @@ async def register(data: authSchema.UserCreate, db: Session = Depends(get_db)):
 
   userRepository.create_user(db, name=data.name, connection=data.connection, email=data.email, password=hashed_password, activation_code=activation_code)
   
-  await send_mail.send_verification_code(email=data.email, code=activation_code)
+  if re.search(r"unb", data.email):
+    await send_mail.send_verification_code(email=data.email, code=activation_code, is_unb=True)
+  else:
+    await send_mail.send_verification_code(email=data.email, code=activation_code)
 
   return JSONResponse(status_code=201, content={ "status": "success" })
 
@@ -124,6 +129,26 @@ async def validate_account(data: authSchema.AccountValidation, db: Session = Dep
   userRepository.activate_account(db, user)
   return JSONResponse(status_code=200, content={ "status": "success" })
 
+ # cadastro da senha de admin / role do admin
+@auth.post('/admin-setup')
+async def admin_setup(data: authSchema.AdminSetup, db: Session = Depends(get_db)):
+    user = userRepository.get_user_by_email(db, data.email)
+    if not user:
+      raise HTTPException(status_code=404, detail=errorMessages.USER_NOT_FOUND)
+
+    if not user.is_active:
+      raise HTTPException(status_code=400, detail="Account is not active")
+
+    if not re.search(r"unb", data.email):
+      raise HTTPException(status_code=400, detail="Account is not @unb")
+    
+    userRepository.update_user_role(db, user, "ADMIN")
+    
+    #hashed_password_admin = security.get_password_hash(data.password_admin)
+    #userRepository.update_user_password_admin(db, user, hashed_password_admin)
+
+    return JSONResponse(status_code=200, content={"status": "success"})
+
 @auth.post('/reset-password/request')
 async def request_password_(data: authSchema.ResetPasswordRequest, db: Session = Depends(get_db)):
   user = userRepository.get_user_by_email(db, data.email)
@@ -177,3 +202,10 @@ async def update_user_password(data: authSchema.ResetPasswordUpdate, db: Session
   updated_user = userRepository.update_password(db, user, hashed_password)
 
   return updated_user
+
+@auth.get('/users', response_model=List[userSchema.User])
+async def get_users(db: Session = Depends(get_db)):
+    users = userRepository.get_all_users(db)
+    if not users:
+        raise HTTPException(status_code=404, detail="No users found")
+    return users
