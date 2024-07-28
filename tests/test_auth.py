@@ -196,3 +196,23 @@ class TestAuth:
         response = client.patch("/api/auth/activate-account", json={"email": invalid_connection['email'], "code": 123456})
         data = response.json()
         assert response.status_code == 404
+
+    # ADMIN SETUP
+    def test_admin_setup(self, setup):
+            # Testa a tentativa com e-mail inválido
+            response = client.post("/api/auth/admin-setup", json={"email": invalid_connection['email']})
+            data = response.json()
+            assert response.status_code == 404
+            assert data['detail'] == errorMessages.USER_NOT_FOUND
+
+            # Testa a tentativa com usuário inativo
+            response = client.post("/api/auth/admin-setup", json={"email": valid_user_not_active['email']})
+            data = response.json()
+            assert response.status_code == 400
+            assert data['detail'] == "Account is not active"
+
+            # Testa a tentativa com e-mail que não contém "unb"
+            response = client.post("/api/auth/admin-setup", json={"email": valid_user_active_user['email']})
+            data = response.json()
+            assert response.status_code == 400
+            assert data['detail'] == "Account is not @unb"
