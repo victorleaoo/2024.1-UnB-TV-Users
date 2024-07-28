@@ -27,11 +27,11 @@ jobs:
         cd fork-repo
         git remote add upstream ../main-repo
         git fetch upstream
-        git reset --hard upstream/main
+        git reset --hard upstream/develop
 
     - name: Push changes to fork repository
       run: |
         cd fork-repo
-        git push origin main --force
+        git push origin develop --force
       env:
         GITHUB_TOKEN: ${{ secrets.API_GITHUB_TOKEN }}
