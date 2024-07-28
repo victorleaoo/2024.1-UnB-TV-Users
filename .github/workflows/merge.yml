@@ -1,0 +1,28 @@
+name: Merge Repositories
+
+on: [repository_dispatch]
+
+jobs:
+  merge-repositories:
+    runs-on: ubuntu-latest
+    environment: actions
+
+    steps:
+    - name: Checkout Repo 1 (Fork)
+      uses: actions/checkout@v3
+      with:
+        repository: victorleaoo/2024.1-UnB-TV-Users
+        path: repo1
+
+    - name: Clone Repo 2 (Original)
+      run: git clone https://github.com/fga-eps-mds/2024.1-UnB-TV-Frontend.git repo2
+
+    - name: Merge Repo 2 into Repo 1
+      run: |
+        cd repo1
+        git remote add repo2 ../repo2
+        git fetch repo2
+        git merge repo2/main --allow-unrelated-histories
+        git push origin main
+      env:
+        GITHUB_TOKEN: ${{ secrets.API_GITHUB_TOKEN }}
