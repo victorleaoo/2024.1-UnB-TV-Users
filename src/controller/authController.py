@@ -143,9 +143,6 @@ async def admin_setup(data: authSchema.AdminSetup, db: Session = Depends(get_db)
       raise HTTPException(status_code=400, detail="Account is not @unb")
     
     userRepository.update_user_role(db, user, "ADMIN")
-    
-    #hashed_password_admin = security.get_password_hash(data.password_admin)
-    #userRepository.update_user_password_admin(db, user, hashed_password_admin)
 
     return JSONResponse(status_code=200, content={"status": "success"})
 
@@ -202,10 +199,3 @@ async def update_user_password(data: authSchema.ResetPasswordUpdate, db: Session
   updated_user = userRepository.update_password(db, user, hashed_password)
 
   return updated_user
-
-@auth.get('/users', response_model=List[userSchema.User])
-async def get_users(db: Session = Depends(get_db)):
-    users = userRepository.get_all_users(db)
-    if not users:
-        raise HTTPException(status_code=404, detail="No users found")
-    return users
