@@ -123,9 +123,8 @@ class TestAuth:
         
         assert response.status_code == 200
         assert isinstance(data, list)
-        assert len(data) == len(enumeration.UserConnection._value2member_map_)  # Garante que todos os valores da enum estão presentes
+        assert len(data) == len(enumeration.UserConnection._value2member_map_)  
 
-        # Verifica se cada valor da enum está na resposta
         for connection in enumeration.UserConnection:
             assert connection.value in data
 
@@ -215,8 +214,6 @@ class TestAuth:
         data = response.json()
         assert response.status_code == 404
         assert data['detail'] == errorMessages.INVALID_CODE
-
-    
 
     # ADMIN SETUP
     def test_admin_setup(self, setup):
